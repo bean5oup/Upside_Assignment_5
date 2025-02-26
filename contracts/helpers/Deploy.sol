@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import 'forge-std/Test.sol';
+
 import '../facets/DiamondCutFacet.sol';
 import '../facets/DiamondLoupeFacet.sol';
 import '../Governance.sol';
 
-contract Deploy {
+library Deploy {
     function deploy() public returns (address governance) {
         address diamondCutFacet = address(new DiamondCutFacet());
-        governance = address(new Governance(msg.sender, diamondCutFacet));
+        governance = address(new Governance(address(this), diamondCutFacet));
 
-        address loupeLogic = address(new DiamondLoupeFacet());
+        address loupe = address(new DiamondLoupeFacet());
         IDiamondCut diamondCut = IDiamondCut(governance);
 
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
@@ -23,10 +25,12 @@ contract Deploy {
         loupeSelectors[3] = IDiamondLoupe.facetAddress.selector;
 
         cut[0] = IDiamondCut.FacetCut({
-            facetAddress: loupeLogic,
+            facetAddress: loupe,
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: loupeSelectors
         });
+
+        // Add Governance Facet
 
         diamondCut.diamondCut(cut, address(0), '');
     }

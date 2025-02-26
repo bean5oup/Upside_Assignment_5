@@ -2,32 +2,29 @@
 pragma solidity ^0.8.13;
 
 import {Multicall} from '../../utils/Multicall.sol';
+import {LibDiamond} from '../../utils/LibDiamond.sol';
+import '../../utils/Types.sol';
 
-contract TimeLock is Multicall {
+abstract contract TimeLock is Multicall {
     /// @dev Constants used for gas efficiency.
-    uint256 constant MINIMUM_DELAY = 5 minutes;
-    uint256 constant MAXIMUM_DELAY = 30 minutes;
+    uint256 constant MINIMUM_DELTA = 5 minutes;
+    uint256 constant MAXIMUM_DELTA = 30 minutes;
 
-    address public base;
-    mapping(uint256 => uint256) public proposals;
-
-    modifier onlyBase() {
-        require(msg.sender == base, 'Caller is not base.');
+    modifier onlyWorker() {
+        require(msg.sender == LibDiamond.localStorage().worker, 'Caller is not a worker.');
         _;
     }
 
-    constructor() {
-        base = msg.sender;
+    function addProposal(Proposal memory p) external onlyWorker() {
+        require(p.pendingTime >= MINIMUM_DELTA && p.pendingTime <= MAXIMUM_DELTA, 'Invalid delta.');
+        LibDiamond.localStorage().proposals[p.id] = p;
     }
 
-    function addProposal(uint256 id, uint256 delay) external onlyBase() {
-        require(delay >= MINIMUM_DELAY && delay <= MAXIMUM_DELAY, 'Invalid delay.');
-        proposals[id] = block.timestamp + delay;
-    }
-
-    function executeProposal(uint256 id, bytes[] calldata data) external onlyBase() {
-        require(proposals[id] > 0, 'Not registered.');
-        require(proposals[id] < block.timestamp, 'Proposal is not yet executable.');
-        this.multicall(data);
+    function executeProposal(uint256 id) external onlyWorker() {
+        LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
+        Proposal memory p = local.proposals[id];
+        // require(local.proposals[id] > 0, 'Not registered.');
+        // require(local.proposals[id] < block.timestamp, 'Proposal is not yet executable.');
+        this.multicall(p.targets, p.values, p.signatures, p.data);
     }
 }

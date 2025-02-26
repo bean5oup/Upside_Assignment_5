@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import 'forge-std/Test.sol';
+
 import {LibDiamond} from './utils/LibDiamond.sol';
 import {IDiamondCut} from './interfaces/IDiamondCut.sol';
 
@@ -20,7 +22,9 @@ contract Governance {
     }
 
     fallback() external payable {
+        // get facet from function selector
         address facet = LibDiamond.localStorage().selectorToFacetAndPosition[msg.sig].facetAddress;
+        require(facet != address(0), "Diamond: Function does not exist");
         // Execute external function from facet using delegatecall and return any value.
         assembly {
             // copy function selector and any arguments

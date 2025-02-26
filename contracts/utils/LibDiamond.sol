@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import 'forge-std/Test.sol';
+
 import {IDiamondCut} from '../interfaces/IDiamondCut.sol';
+import '../utils/Types.sol';
 
 library LibDiamond {
     bytes32 constant LOCAL_STORAGE_POSITION = keccak256("diamond.storage.local");
@@ -26,6 +29,13 @@ library LibDiamond {
         address[] facetAddresses;
         // owner of the contract
         address worker;
+
+        // TimeLockFacet.sol
+        uint256 pid;
+
+        mapping(uint256 => Proposal) proposals;
+
+        uint256[] activeProposals;
     }
 
     function localStorage() internal pure returns (LocalStorage storage local) {

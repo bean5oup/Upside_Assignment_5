@@ -3,16 +3,23 @@ pragma solidity ^0.8.13;
 
 /// @notice The set of possible statuses for a proposal
 enum ProposalStatus {
-    Pending,
-    Executed,
-    Canceled
+    Voting,
+    Accepted,
+    Rejected,
+    Executed
 }
 
 struct Proposal {
     /// @notice 
     uint256 id;
 
-    uint256 startBlock;
+    ProposalStatus status;
+
+    uint256 startTime;
+
+    uint256 pendingTime;
+    
+    bool executed;
 
     address proposer;
 
@@ -27,4 +34,6 @@ struct Proposal {
     string[] signatures;
 
     bytes[] data;
+
+    string description;
 }
