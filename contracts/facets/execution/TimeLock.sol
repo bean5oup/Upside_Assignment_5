@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {Multicall} from '../../utils/Multicall.sol';
+// import {Multicall} from '../../utils/Multicall.sol';
 import {LibDiamond} from '../../utils/LibDiamond.sol';
 import '../../utils/Types.sol';
 
-abstract contract TimeLock is Multicall {
+contract TimeLock {
     /// @dev Constants used for gas efficiency.
     uint256 constant MINIMUM_DELTA = 5 minutes;
     uint256 constant MAXIMUM_DELTA = 30 minutes;
@@ -25,6 +25,6 @@ abstract contract TimeLock is Multicall {
         Proposal memory p = local.proposals[id];
         // require(local.proposals[id] > 0, 'Not registered.');
         // require(local.proposals[id] < block.timestamp, 'Proposal is not yet executable.');
-        this.multicall(p.targets, p.values, p.signatures, p.data);
+        // this.multicall(p.targets, p.values, p.signatures, p.data);
     }
 }

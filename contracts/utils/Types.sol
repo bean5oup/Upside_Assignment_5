@@ -31,7 +31,7 @@ struct Proposal {
 
     uint256[] values;
 
-    string[] signatures;
+    bytes4[] signatures;
 
     bytes[] data;
 

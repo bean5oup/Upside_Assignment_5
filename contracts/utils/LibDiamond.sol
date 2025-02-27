@@ -34,8 +34,6 @@ library LibDiamond {
         uint256 pid;
 
         mapping(uint256 => Proposal) proposals;
-
-        uint256[] activeProposals;
     }
 
     function localStorage() internal pure returns (LocalStorage storage local) {

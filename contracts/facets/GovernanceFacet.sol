@@ -1,16 +1,36 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {LibDiamond} from '../../utils/LibDiamond.sol';
-import '../../utils/Types.sol';
-import './TimeLock.sol';
+import 'forge-std/Test.sol';
 
-contract GovernanceFacet is TimeLock {
+import {Multicall} from '../utils/Multicall.sol';
+import {IGovernance} from '../interfaces/IGovernance.sol';
+import {LibDiamond} from '../utils/LibDiamond.sol';
+import '../utils/Types.sol';
+
+contract GovernanceFacet is Multicall {
+    /// @dev Constants used for gas efficiency.
+    uint256 constant MINIMUM_DELTA = 5 minutes;
+    uint256 constant MAXIMUM_DELTA = 30 minutes;
+
     constructor() {
         
     }
 
-    function propose(uint256 time, address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory data, string memory description) public returns (uint256) {
+    function addProposal(Proposal memory p) public {
+        require(p.pendingTime >= MINIMUM_DELTA && p.pendingTime <= MAXIMUM_DELTA, 'Invalid delta.');
+        LibDiamond.localStorage().proposals[p.id] = p;
+    }
+
+    function executeProposal(uint256 id) public payable {
+        LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
+        Proposal memory p = local.proposals[id];
+        // require(local.proposals[id] > 0, 'Not registered.');
+        // require(local.proposals[id] < block.timestamp, 'Proposal is not yet executable.');
+        multicall(p.targets, p.values, p.signatures, p.data);
+    }
+
+    function propose(uint256 time, address[] memory targets, uint[] memory values, bytes4[] memory signatures, bytes[] memory data, string memory description) public returns (uint256) {
         LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
         // check minimum token amount to propose.
         // require();
@@ -24,7 +44,7 @@ contract GovernanceFacet is TimeLock {
         p.pendingTime = time;
         p.executed = false;
         p.proposer = tx.origin;
-        p.votesFor = 0;
+        p.votesFor = 1;
         p.votesAgainst = 0;
         p.targets = targets;
         p.values = values;
@@ -32,9 +52,7 @@ contract GovernanceFacet is TimeLock {
         p.data = data;
         p.description = description;
 
-        local.activeProposals.push(p.id);
-
-        this.addProposal(p);
+        addProposal(p);
         
         return p.id;
     }
@@ -44,10 +62,10 @@ contract GovernanceFacet is TimeLock {
         Proposal memory p = local.proposals[id];
 
         p.status = status(p.id);
-        require(p.status == ProposalStatus.Accepted);
-
-        p.executed = true;
-        this.executeProposal(p.id);
+        if(p.status == ProposalStatus.Accepted) {
+            p.executed = true;
+            executeProposal(p.id);
+        }
     }
 
     function status(uint256 id) public view returns (ProposalStatus) {
@@ -70,7 +88,9 @@ contract GovernanceFacet is TimeLock {
         }
     }
 
-    function vote() public {
-
+    function vote(uint256 id, bool support) public {
+        LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
+        Proposal memory p = local.proposals[id];
+        require(status(p.id) == ProposalStatus.Voting);
     }
 }
