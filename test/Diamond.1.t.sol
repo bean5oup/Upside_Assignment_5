@@ -243,7 +243,7 @@ contract PublicTest1 is Test {
         vm.stopPrank();
     }
 
-    function test_ToeknDepositVotes() public {
+    function test_TokenDepositVotes() public {
         vm.startPrank(governance);
         TestToken(token_).mint(player, 11);
         TestToken(token_).mint(voter, 11);
