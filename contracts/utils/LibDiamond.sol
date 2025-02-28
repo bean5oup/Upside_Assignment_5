@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
-
-import 'forge-std/Test.sol';
+pragma solidity ^0.8.10;
 
 import {IDiamondCut} from '../interfaces/IDiamondCut.sol';
 import '../utils/Types.sol';
@@ -34,6 +32,8 @@ library LibDiamond {
         uint256 pid;
 
         mapping(uint256 => Proposal) proposals;
+
+        address token;
     }
 
     function localStorage() internal pure returns (LocalStorage storage local) {

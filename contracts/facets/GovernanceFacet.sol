@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.10;
 
-import 'forge-std/Test.sol';
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {Multicall} from '../utils/Multicall.sol';
 import {IGovernance} from '../interfaces/IGovernance.sol';
@@ -13,53 +13,47 @@ contract GovernanceFacet is Multicall {
     uint256 constant MINIMUM_DELTA = 5 minutes;
     uint256 constant MAXIMUM_DELTA = 30 minutes;
 
-    constructor() {
-        
-    }
-
-    function addProposal(Proposal memory p) public {
-        require(p.pendingTime >= MINIMUM_DELTA && p.pendingTime <= MAXIMUM_DELTA, 'Invalid delta.');
-        LibDiamond.localStorage().proposals[p.id] = p;
-    }
-
     function executeProposal(uint256 id) public payable {
         LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
-        Proposal memory p = local.proposals[id];
+        Proposal storage p = local.proposals[id];
         // require(local.proposals[id] > 0, 'Not registered.');
         // require(local.proposals[id] < block.timestamp, 'Proposal is not yet executable.');
         multicall(p.targets, p.values, p.signatures, p.data);
     }
 
-    function propose(uint256 time, address[] memory targets, uint[] memory values, bytes4[] memory signatures, bytes[] memory data, string memory description) public returns (uint256) {
-        LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
-        // check minimum token amount to propose.
-        // require();
+    function propose(uint256 duration, address[] memory targets, uint[] memory values, bytes4[] memory signatures, bytes[] memory data, string memory description) public returns (uint256) {
         require(targets.length != 0);
         require(targets.length == values.length && targets.length == signatures.length && targets.length == data.length, "All arrays must have the same length.");
         
-        Proposal memory p;
+        LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
+        
+        // check minimum token amount to propose.
+        uint256 power = IERC20(local.token).balanceOf(msg.sender);
+        require(power > 10, 'Insufficient tokens to propose.');
+
+        require(duration >= MINIMUM_DELTA && duration <= MAXIMUM_DELTA, 'Invalid duration.');
+        Proposal storage p = LibDiamond.localStorage().proposals[local.pid];
         p.id = local.pid++;
         p.status = ProposalStatus.Voting;
         p.startTime = block.timestamp;
-        p.pendingTime = time;
+        p.duration = duration;
         p.executed = false;
         p.proposer = tx.origin;
-        p.votesFor = 1;
+        p.votesFor = power;
         p.votesAgainst = 0;
         p.targets = targets;
         p.values = values;
         p.signatures = signatures;
         p.data = data;
         p.description = description;
+        p.voters[msg.sender] = power;
 
-        addProposal(p);
-        
         return p.id;
     }
 
     function execute(uint256 id) public payable {
         LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
-        Proposal memory p = local.proposals[id];
+        Proposal storage p = local.proposals[id];
 
         p.status = status(p.id);
         if(p.status == ProposalStatus.Accepted) {
@@ -70,11 +64,11 @@ contract GovernanceFacet is Multicall {
 
     function status(uint256 id) public view returns (ProposalStatus) {
         LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
-        Proposal memory p = local.proposals[id];
+        Proposal storage p = local.proposals[id];
 
         if (p.executed) {
             return ProposalStatus.Executed;
-        } else if (block.timestamp < (p.startTime + p.pendingTime)) {
+        } else if (block.timestamp < (p.startTime + p.duration)) {
             return ProposalStatus.Voting;
         }
 
@@ -88,9 +82,31 @@ contract GovernanceFacet is Multicall {
         }
     }
 
-    function vote(uint256 id, bool support) public {
+    function depositVotes(uint256 id, bool support, uint256 amount) public {
         LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
-        Proposal memory p = local.proposals[id];
+        Proposal storage p = local.proposals[id];
         require(status(p.id) == ProposalStatus.Voting);
+        require(p.voters[msg.sender] == 0, 'Already voted.');
+
+        uint256 power = IERC20(local.token).balanceOf(msg.sender);
+        require(amount <= power);
+
+        IERC20(local.token).transferFrom(msg.sender, address(this), amount);
+        if(support)
+            p.votesFor += amount;
+        else
+            p.votesAgainst += amount;
+        p.voters[msg.sender] = amount;
+    }
+
+    function withdrawVotes(uint256 id) public {
+        // Checks-Effects-interactions pattern.
+        // Pull over push.
+        LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
+        Proposal storage p = local.proposals[id];
+        require(status(p.id) == ProposalStatus.Rejected || status(p.id) == ProposalStatus.Executed);
+        uint256 amount = p.voters[msg.sender];
+        p.voters[msg.sender] = 0;
+        IERC20(local.token).transfer(msg.sender, amount);
     }
 }

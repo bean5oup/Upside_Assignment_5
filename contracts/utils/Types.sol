@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.10;
 
 /// @notice The set of possible statuses for a proposal
 enum ProposalStatus {
@@ -17,7 +17,7 @@ struct Proposal {
 
     uint256 startTime;
 
-    uint256 pendingTime;
+    uint256 duration;
     
     bool executed;
 
@@ -36,4 +36,6 @@ struct Proposal {
     bytes[] data;
 
     string description;
+
+    mapping(address => uint256) voters;
 }

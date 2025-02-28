@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
-
-import 'forge-std/Test.sol';
+pragma solidity ^0.8.10;
 
 /// @title  Multicall
 /// @notice Enables calling multiple methods in a single call to the contract

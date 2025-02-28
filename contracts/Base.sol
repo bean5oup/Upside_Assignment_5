@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
-
-import 'forge-std/Test.sol';
+pragma solidity ^0.8.10;
 
 import {LibDiamond} from './utils/LibDiamond.sol';
 import {IDiamondCut} from './interfaces/IDiamondCut.sol';
@@ -10,8 +8,9 @@ import './facets/DiamondLoupeFacet.sol';
 import './facets/GovernanceFacet.sol';
 
 contract Base {
-    constructor() {
+    constructor(address token) {
         LibDiamond.setWorker(address(this));
+        LibDiamond.localStorage().token = token;
 
         address diamondCutFacet = address(new DiamondCutFacet());
 
@@ -44,8 +43,8 @@ contract Base {
         governanceSelectors[0] = IGovernance.propose.selector;
         governanceSelectors[1] = IGovernance.execute.selector;
         governanceSelectors[2] = IGovernance.status.selector;
-        governanceSelectors[3] = IGovernance.vote.selector;
-        governanceSelectors[4] = IGovernance.addProposal.selector;
+        governanceSelectors[3] = IGovernance.depositVotes.selector;
+        governanceSelectors[4] = IGovernance.withdrawVotes.selector;
         governanceSelectors[5] = IGovernance.executeProposal.selector;
 
         cut[2] = IDiamondCut.FacetCut({
