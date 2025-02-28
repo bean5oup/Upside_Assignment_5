@@ -12,6 +12,7 @@ import '../contracts/Base.sol';
 contract PublicTest1 is Test {
     address deployer = makeAddr('deployer');
     address player = makeAddr('player');
+    address voter = makeAddr('voter');
 
     address public governance;
     address public token_;
@@ -241,6 +242,105 @@ contract PublicTest1 is Test {
         TestToken(token_).transfer(address(this), 1);
         vm.stopPrank();
     }
+
+    function test_ToeknDepositVotes() public {
+        vm.startPrank(governance);
+        TestToken(token_).mint(player, 11);
+        TestToken(token_).mint(voter, 11);
+        vm.stopPrank();
+
+        vm.startPrank(player);
+        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
+
+        bytes4[] memory functionSelectors = new bytes4[](1);
+        functionSelectors[0] = bytes4(keccak256('t1()'));
+
+        cut[0] = IDiamondCut.FacetCut({
+            facetAddress: token_,
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: functionSelectors
+        });
+
+        address[] memory targets = new address[](1);
+        targets[0] = governance;
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes4[] memory signatures = new bytes4[](1);
+        signatures[0] = IDiamondCut.diamondCut.selector;
+
+        bytes[] memory data = new bytes[](1);
+        data[0] = abi.encode(cut, address(0), '');
+
+        uint256 id = GovernanceFacet(governance).propose(5 minutes, targets, values, signatures, data, 'test');
+        vm.stopPrank();
+
+        vm.startPrank(voter);
+        GovernanceFacet(governance).depositVotes(id, false, TestToken(token_).balanceOf(voter));
+
+        vm.warp(block.timestamp + 6 minutes);
+        GovernanceFacet(governance).execute(id);
+
+        vm.stopPrank();
+
+        vm.expectRevert();
+        (bool success, ) = governance.call(abi.encodeWithSignature('t1()'));
+        require(success);
+
+        console.log(TestToken(token_).balanceOf(governance));
+    }
+
+    function test_WithdrawVotes() public {
+        vm.startPrank(governance);
+        TestToken(token_).mint(player, 11);
+        TestToken(token_).mint(voter, 11);
+        vm.stopPrank();
+
+        vm.startPrank(player);
+        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
+
+        bytes4[] memory functionSelectors = new bytes4[](1);
+        functionSelectors[0] = bytes4(keccak256('t1()'));
+
+        cut[0] = IDiamondCut.FacetCut({
+            facetAddress: token_,
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: functionSelectors
+        });
+
+        address[] memory targets = new address[](1);
+        targets[0] = governance;
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes4[] memory signatures = new bytes4[](1);
+        signatures[0] = IDiamondCut.diamondCut.selector;
+
+        bytes[] memory data = new bytes[](1);
+        data[0] = abi.encode(cut, address(0), '');
+
+        uint256 id = GovernanceFacet(governance).propose(5 minutes, targets, values, signatures, data, 'test');
+        vm.stopPrank();
+
+        vm.startPrank(voter);
+        GovernanceFacet(governance).depositVotes(id, false, TestToken(token_).balanceOf(voter));
+
+        vm.expectRevert();
+        GovernanceFacet(governance).withdrawVotes(id);
+
+        vm.warp(block.timestamp + 6 minutes);
+        GovernanceFacet(governance).execute(id);
+
+        GovernanceFacet(governance).withdrawVotes(id);
+        GovernanceFacet(governance).withdrawVotes(id);
+        GovernanceFacet(governance).withdrawVotes(id);
+        vm.stopPrank();
+
+        console.log(TestToken(token_).balanceOf(governance));
+        console.log(TestToken(token_).balanceOf(voter));
+    }
 }
 
 contract TestToken is ERC20 {
@@ -287,10 +387,14 @@ contract TestToken is ERC20 {
     function transferFrom(address sender, address recipient, uint256 amount) 
         public override isStop() returns (bool) 
     {
+        if(msg.sender == owner_) {
+            _transfer(sender, recipient, amount);
+            return true;
+        }
         return super.transferFrom(sender, recipient, amount);
     }
 
-    function t1() public isOwner() {
+    function t1() public view isOwner() {
         console.log('t1');
         console.log('msg.sender: ', msg.sender);
     }
@@ -301,7 +405,7 @@ contract TestFacet {
         LibDiamond.localStorage().worker = worker;
     }
 
-    function t2() public {
+    function t2() public pure {
         console.log('t2');
     }
 }

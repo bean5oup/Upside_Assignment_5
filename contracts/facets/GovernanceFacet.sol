@@ -38,7 +38,7 @@ contract GovernanceFacet is Multicall {
         p.startTime = block.timestamp;
         p.duration = duration;
         p.executed = false;
-        p.proposer = tx.origin;
+        p.proposer = msg.sender;
         p.votesFor = power;
         p.votesAgainst = 0;
         p.targets = targets;
@@ -47,6 +47,8 @@ contract GovernanceFacet is Multicall {
         p.data = data;
         p.description = description;
         p.voters[msg.sender] = power;
+
+        IERC20(local.token).transferFrom(msg.sender, address(this), power);
 
         return p.id;
     }
@@ -104,7 +106,7 @@ contract GovernanceFacet is Multicall {
         // Pull over push.
         LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
         Proposal storage p = local.proposals[id];
-        require(status(p.id) == ProposalStatus.Rejected || status(p.id) == ProposalStatus.Executed);
+        require(status(p.id) == ProposalStatus.Rejected || status(p.id) == ProposalStatus.Executed, 'Voting is in progress.');
         uint256 amount = p.voters[msg.sender];
         p.voters[msg.sender] = 0;
         IERC20(local.token).transfer(msg.sender, amount);
