@@ -12,5 +12,5 @@
 -   (Required) Emergency Stop
 -   (Challenge) Diamonds, Multi-Facet Proxy
 -   (Challenge) Tokenomics
--   (Challenge) Poc
--   (Challenge) Optimization
+-   ~~(Challenge) Poc~~
+-   ~~(Challenge) Optimization~~
