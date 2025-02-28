@@ -6,9 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "forge-std/Script.sol";
 import '../contracts/interfaces/IDiamondCut.sol';
 import '../contracts/interfaces/IGovernance.sol';
+import '../contracts/interfaces/IDiamondLoupe.sol';
 
 contract Poc is Script {
-    address governance = address(0x2);
+    address governance = address(0x4);
     address token = address(0x3);
     address zin = address(0x0);
     address bean5oup = address(0x1);
@@ -18,6 +19,16 @@ contract Poc is Script {
     }
 
     function run() public {
+        vm.startBroadcast(vm.envUint("PK_"));
+        IDiamondLoupe.Facet[] memory addresses = IDiamondLoupe(governance).facets();
+        for(uint i; i < addresses.length; i++) {
+            console.log(addresses[i].facetAddress);
+            console.log(addresses[i].functionSelectors.length);
+        }
+        vm.stopBroadcast();
+    }
+
+    function run1() public {
         console.log('token: ');
         console.log('zin: ', IERC20(token).balanceOf(zin));
         console.log('bean5oup: ', IERC20(token).balanceOf(bean5oup));
