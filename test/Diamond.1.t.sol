@@ -72,7 +72,7 @@ contract PublicTest1 is Test {
 
         GovernanceFacet(governance).execute(id);
 
-        vm.warp(block.timestamp + 5 minutes);
+        vm.warp(block.timestamp + 6 minutes);
         GovernanceFacet(governance).execute(id);
         vm.stopPrank();
     }
@@ -235,7 +235,7 @@ contract PublicTest1 is Test {
 
         GovernanceFacet(governance).execute(id);
 
-        vm.warp(block.timestamp + 5 minutes);
+        vm.warp(block.timestamp + 6 minutes);
         GovernanceFacet(governance).execute(id);
 
         vm.expectRevert();

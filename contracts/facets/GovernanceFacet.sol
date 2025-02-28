@@ -13,14 +13,6 @@ contract GovernanceFacet is Multicall {
     uint256 constant MINIMUM_DELTA = 5 minutes;
     uint256 constant MAXIMUM_DELTA = 30 minutes;
 
-    function executeProposal(uint256 id) public payable {
-        LibDiamond.LocalStorage storage local = LibDiamond.localStorage();
-        Proposal storage p = local.proposals[id];
-        // require(local.proposals[id] > 0, 'Not registered.');
-        // require(local.proposals[id] < block.timestamp, 'Proposal is not yet executable.');
-        multicall(p.targets, p.values, p.signatures, p.data);
-    }
-
     function propose(uint256 duration, address[] memory targets, uint[] memory values, bytes4[] memory signatures, bytes[] memory data, string memory description) public returns (uint256) {
         require(targets.length != 0);
         require(targets.length == values.length && targets.length == signatures.length && targets.length == data.length, "All arrays must have the same length.");
@@ -60,7 +52,8 @@ contract GovernanceFacet is Multicall {
         p.status = status(p.id);
         if(p.status == ProposalStatus.Accepted) {
             p.executed = true;
-            executeProposal(p.id);
+            require((p.startTime + p.duration) < block.timestamp, 'Proposal is not yet executable.');
+            multicall(p.targets, p.values, p.signatures, p.data);
         }
     }
 
